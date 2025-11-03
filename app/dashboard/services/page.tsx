@@ -96,6 +96,46 @@ export default function ServicesPage() {
     loadData();
   }, []);
 
+  // Synchroniser les questions des services avec la banque de questions
+  useEffect(() => {
+    if (services.length === 0 || questions.length === 0) return;
+
+    // Extraire toutes les questions de tous les services
+    const serviceQuestions: Question[] = [];
+    services.forEach((service) => {
+      if (service.questions && Array.isArray(service.questions)) {
+        service.questions.forEach((q: any) => {
+          const qId = typeof q === 'string' ? q : q.questionId || q.questionTemplate?.id || q.id;
+          const template = typeof q === 'object' && q.questionTemplate ? q.questionTemplate : q;
+          
+          if (qId && template && typeof template === 'object' && template.label) {
+            serviceQuestions.push({
+              id: qId,
+              label: template.label || '',
+              aiPrompt: template.aiPrompt || template.label || '',
+              responseType: template.responseType || 'text',
+              category: template.category || 'autre',
+              options: template.options || null,
+              isSystem: template.isSystem !== false,
+            });
+          }
+        });
+      }
+    });
+
+    // Ajouter les questions manquantes à la banque
+    if (serviceQuestions.length > 0) {
+      setQuestions((prev) => {
+        const existingIds = new Set(prev.map((q) => q.id));
+        const newQuestions = serviceQuestions.filter((q) => !existingIds.has(q.id));
+        if (newQuestions.length > 0) {
+          return [...prev, ...newQuestions];
+        }
+        return prev;
+      });
+    }
+  }, [services]);
+
   const loadData = async () => {
     try {
       const [servicesData, questionsData, orgData] = await Promise.all([
@@ -128,7 +168,7 @@ export default function ServicesPage() {
     setEditingServiceId(null);
   };
 
-  const handleEditService = (service: Service) => {
+  const handleEditService = async (service: Service) => {
     // Récupérer les IDs des questions dans l'ordre
     const questionIds = service.questions
       .sort((a: any, b: any) => {
@@ -138,6 +178,34 @@ export default function ServicesPage() {
       })
       .map((q: any) => (typeof q === 'string' ? q : q.questionId || q.questionTemplate?.id || q.id))
       .filter(Boolean);
+
+    // Extraire les questions du service et les ajouter à la banque si elles n'y sont pas
+    const serviceQuestions = service.questions
+      .map((q: any) => {
+        const qId = typeof q === 'string' ? q : q.questionId || q.questionTemplate?.id || q.id;
+        const template = typeof q === 'object' && q.questionTemplate ? q.questionTemplate : q;
+        
+        if (qId && template && typeof template === 'object') {
+          return {
+            id: qId,
+            label: template.label || '',
+            aiPrompt: template.aiPrompt || template.label || '',
+            responseType: template.responseType || 'text',
+            category: template.category || 'autre',
+            options: template.options || null,
+            isSystem: template.isSystem !== false,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as Question[];
+
+    // Ajouter les questions du service à la banque si elles n'y sont pas déjà
+    setQuestions((prev) => {
+      const existingIds = new Set(prev.map((q) => q.id));
+      const newQuestions = serviceQuestions.filter((q) => !existingIds.has(q.id));
+      return [...prev, ...newQuestions];
+    });
 
     setFormData({
       name: service.name,
@@ -307,6 +375,36 @@ export default function ServicesPage() {
   const getSelectedQuestionsData = () => {
     return formData.selectedQuestions.map((qId) => {
       const question = questions.find((q) => q.id === qId);
+      
+      // Si la question n'est pas trouvée, essayer de la récupérer depuis les services chargés
+      if (!question) {
+        // Chercher dans tous les services pour trouver la question
+        const serviceWithQuestion = services.find((s) => {
+          return s.questions?.some((q: any) => {
+            const qIdFromService = typeof q === 'string' ? q : q.questionId || q.questionTemplate?.id || q.id;
+            return qIdFromService === qId;
+          });
+        });
+        
+        if (serviceWithQuestion) {
+          const qFromService = serviceWithQuestion.questions?.find((q: any) => {
+            const qIdFromService = typeof q === 'string' ? q : q.questionId || q.questionTemplate?.id || q.id;
+            return qIdFromService === qId;
+          });
+          
+          if (qFromService) {
+            const template = typeof qFromService === 'object' && qFromService.questionTemplate ? qFromService.questionTemplate : qFromService;
+            if (template && typeof template === 'object' && template.label) {
+              // Retourner le label depuis le template du service
+              return {
+                id: qId,
+                label: template.label || 'Question inconnue',
+              };
+            }
+          }
+        }
+      }
+      
       return {
         id: qId,
         label: question?.label || 'Question inconnue',
