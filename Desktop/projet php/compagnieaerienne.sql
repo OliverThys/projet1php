@@ -1,32 +1,19 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Hôte : 127.0.0.1:3306
--- Généré le : jeu. 13 nov. 2025 à 09:09
--- Version du serveur : 9.1.0
--- Version de PHP : 8.3.14
+-- Script SQL pour créer la base de données de l'agence de voyage
+-- J'ai exporté ça depuis phpMyAdmin
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-
+-- Configuration de l'encodage
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
---
--- Base de données : `compagnieaerienne`
---
+-- Base de données compagnieaerienne
 
--- --------------------------------------------------------
-
---
--- Structure de la table `client`
---
-
+-- Table client - infos des clients qui réservent
 DROP TABLE IF EXISTS `client`;
 CREATE TABLE IF NOT EXISTS `client` (
   `id_client` int NOT NULL AUTO_INCREMENT,
@@ -38,12 +25,7 @@ CREATE TABLE IF NOT EXISTS `client` (
   PRIMARY KEY (`id_client`)
 ) ;
 
--- --------------------------------------------------------
-
---
--- Structure de la table `continent`
---
-
+-- Table continent - les continents disponibles
 DROP TABLE IF EXISTS `continent`;
 CREATE TABLE IF NOT EXISTS `continent` (
   `id_continent` int NOT NULL AUTO_INCREMENT,
@@ -51,22 +33,14 @@ CREATE TABLE IF NOT EXISTS `continent` (
   PRIMARY KEY (`id_continent`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Déchargement des données de la table `continent`
---
-
+-- Données des continents
 INSERT INTO `continent` (`id_continent`, `nom`) VALUES
 (1, 'Afrique'),
 (2, 'Europe'),
 (3, 'Amérique'),
 (4, 'Asie');
 
--- --------------------------------------------------------
-
---
--- Structure de la table `pays`
---
-
+-- Table pays - les pays par continent
 DROP TABLE IF EXISTS `pays`;
 CREATE TABLE IF NOT EXISTS `pays` (
   `id_pays` int NOT NULL AUTO_INCREMENT,
@@ -76,10 +50,7 @@ CREATE TABLE IF NOT EXISTS `pays` (
   KEY `id_continent` (`id_continent`)
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Déchargement des données de la table `pays`
---
-
+-- Données des pays
 INSERT INTO `pays` (`id_pays`, `nom`, `id_continent`) VALUES
 (1, 'Maroc', 1),
 (2, 'Sénégal', 1),
@@ -94,12 +65,7 @@ INSERT INTO `pays` (`id_pays`, `nom`, `id_continent`) VALUES
 (11, 'Chine', 4),
 (12, 'Turquie', 4);
 
--- --------------------------------------------------------
-
---
--- Structure de la table `ville`
---
-
+-- Table ville - les villes par pays
 DROP TABLE IF EXISTS `ville`;
 CREATE TABLE IF NOT EXISTS `ville` (
   `id_ville` int NOT NULL AUTO_INCREMENT,
@@ -109,10 +75,7 @@ CREATE TABLE IF NOT EXISTS `ville` (
   KEY `id_pays` (`id_pays`)
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Déchargement des données de la table `ville`
---
-
+-- Données des villes
 INSERT INTO `ville` (`id_ville`, `nom`, `id_pays`) VALUES
 (1, 'Tokyo', 10),
 (2, 'Nagoya', 10),
@@ -139,12 +102,7 @@ INSERT INTO `ville` (`id_ville`, `nom`, `id_pays`) VALUES
 (23, 'Nairobi', 3),
 (24, 'Mombasa', 3);
 
--- --------------------------------------------------------
-
---
--- Structure de la table `vol`
---
-
+-- Table vol - les vols disponibles avec leurs prix
 DROP TABLE IF EXISTS `vol`;
 CREATE TABLE IF NOT EXISTS `vol` (
   `id_vol` int NOT NULL AUTO_INCREMENT,
@@ -156,10 +114,7 @@ CREATE TABLE IF NOT EXISTS `vol` (
   KEY `id_ville_arrivee` (`id_ville_arrivee`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Déchargement des données de la table `vol`
---
-
+-- Données des vols avec les prix selon l'âge
 INSERT INTO `vol` (`id_vol`, `id_ville_arrivee`, `prix_bebe`, `prix_enfant`, `prix_adulte`) VALUES
 (1, 1, 200.00, 250.00, 400.00),
 (2, 2, 210.00, 260.00, 450.00),
@@ -187,12 +142,7 @@ INSERT INTO `vol` (`id_vol`, `id_ville_arrivee`, `prix_bebe`, `prix_enfant`, `pr
 (24, 24, 250.00, 320.00, 420.00),
 (26, 2, 210.00, 260.00, 450.00);
 
--- --------------------------------------------------------
-
---
--- Structure de la table `voyage`
---
-
+-- Table voyage - les réservations des clients
 DROP TABLE IF EXISTS `voyage`;
 CREATE TABLE IF NOT EXISTS `voyage` (
   `id_voyage` int NOT NULL AUTO_INCREMENT,
@@ -210,31 +160,20 @@ CREATE TABLE IF NOT EXISTS `voyage` (
   KEY `id_vol` (`id_vol`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Contraintes pour les tables déchargées
---
-
---
--- Contraintes pour la table `pays`
---
+-- Contraintes de clés étrangères - pour lier les tables entre elles
+-- Pays -> Continent
 ALTER TABLE `pays`
   ADD CONSTRAINT `pays_ibfk_1` FOREIGN KEY (`id_continent`) REFERENCES `continent` (`id_continent`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
---
--- Contraintes pour la table `ville`
---
+-- Ville -> Pays
 ALTER TABLE `ville`
   ADD CONSTRAINT `ville_ibfk_1` FOREIGN KEY (`id_pays`) REFERENCES `pays` (`id_pays`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
---
--- Contraintes pour la table `vol`
---
+-- Vol -> Ville
 ALTER TABLE `vol`
   ADD CONSTRAINT `vol_ibfk_1` FOREIGN KEY (`id_ville_arrivee`) REFERENCES `ville` (`id_ville`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
---
--- Contraintes pour la table `voyage`
---
+-- Voyage -> Client et Vol
 ALTER TABLE `voyage`
   ADD CONSTRAINT `voyage_ibfk_1` FOREIGN KEY (`id_client`) REFERENCES `client` (`id_client`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   ADD CONSTRAINT `voyage_ibfk_2` FOREIGN KEY (`id_vol`) REFERENCES `vol` (`id_vol`) ON DELETE RESTRICT ON UPDATE RESTRICT;
