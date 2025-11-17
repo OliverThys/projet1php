@@ -1,12 +1,11 @@
-/**
- * Feuille de style pour l'agence de voyage
- * Design moderne et professionnel - Version Premium
+/* CSS pour l'agence de voyage
+ * J'ai utilisé des variables CSS pour pas avoir à répéter les couleurs partout
  */
 
-/* Import Google Fonts */
+/* Import des polices Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-/* Variables CSS */
+/* Variables CSS - comme ça je peux changer les couleurs facilement */
 :root {
     --primary-color: #6366f1;
     --primary-dark: #4f46e5;
@@ -43,13 +42,14 @@
     --radius-2xl: 1.5rem;
 }
 
-/* Reset et base */
+/* Reset CSS - enlève les marges et padding par défaut */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* Style de base pour le body */
 body {
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
@@ -62,7 +62,7 @@ body {
     overflow-x: hidden;
 }
 
-/* Animation de fond */
+/* Animation de fond - ça bouge un peu pour faire joli */
 body::before {
     content: '';
     position: fixed;
@@ -78,11 +78,13 @@ body::before {
     animation: backgroundMove 20s ease-in-out infinite;
 }
 
+/* Animation pour le fond */
 @keyframes backgroundMove {
     0%, 100% { transform: translate(0, 0) scale(1); }
     50% { transform: translate(-20px, -20px) scale(1.1); }
 }
 
+/* Container principal */
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -95,6 +97,7 @@ body::before {
     animation: fadeInUp 0.6s ease-out;
 }
 
+/* Animation d'apparition */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -106,7 +109,7 @@ body::before {
     }
 }
 
-/* Header */
+/* Header - en haut de la page */
 header {
     background: var(--gradient-header);
     color: white;
@@ -116,6 +119,7 @@ header {
     overflow: hidden;
 }
 
+/* Décoration du header */
 .header-decoration {
     position: absolute;
     top: 0;
@@ -128,17 +132,20 @@ header {
     animation: headerShimmer 3s ease-in-out infinite;
 }
 
+/* Animation pour la décoration */
 @keyframes headerShimmer {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.8; }
 }
 
+/* Contenu du header */
 .header-content {
     position: relative;
     z-index: 2;
     padding: 50px 30px;
 }
 
+/* Icône dans le header - l'avion qui flotte */
 .header-icon {
     font-size: 4rem;
     margin-bottom: 20px;
@@ -146,6 +153,7 @@ header {
     display: inline-block;
 }
 
+/* Animation pour l'icône */
 @keyframes float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
@@ -201,13 +209,13 @@ header h1 {
     font-size: 1rem;
 }
 
-/* Main content */
+/* Contenu principal */
 main {
     padding: 40px;
     background: var(--bg-light);
 }
 
-/* Form container */
+/* Container du formulaire */
 .form-container {
     background: var(--bg-white);
     padding: 40px;
@@ -250,7 +258,7 @@ main {
     margin-top: 5px;
 }
 
-/* Sections du formulaire */
+/* Sections du formulaire - chaque partie (infos perso, destination, etc.) */
 .section-form {
     background: var(--bg-card);
     padding: 30px;
@@ -311,7 +319,7 @@ main {
     font-weight: 600;
 }
 
-/* Form groups */
+/* Groupes de champs du formulaire */
 .form-group {
     margin-bottom: 25px;
     position: relative;
@@ -368,14 +376,14 @@ main {
     font-style: italic;
 }
 
-/* Requis */
+/* Astérisque pour les champs obligatoires */
 .requis {
     color: var(--danger-color);
     font-weight: bold;
     font-size: 1.1em;
 }
 
-/* Voyageurs */
+/* Style pour chaque groupe de voyageur */
 .voyageur-group {
     background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     padding: 25px;
@@ -425,14 +433,14 @@ main {
     font-size: 1.3rem;
 }
 
-/* Boissons */
+/* Input pour les boissons - plus petit que les autres */
 .boisson-input {
     width: 100px !important;
     display: inline-block;
     margin-left: 10px;
 }
 
-/* Payment options */
+/* Options de paiement */
 .payment-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -499,7 +507,7 @@ main {
     box-shadow: var(--shadow-sm);
 }
 
-/* Messages */
+/* Messages d'erreur ou de succès */
 .message {
     padding: 18px 20px;
     margin-bottom: 25px;
@@ -535,7 +543,7 @@ main {
     border-left-color: var(--success-color);
 }
 
-/* Info */
+/* Bloc d'info */
 .info {
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     color: #1e40af;
@@ -553,7 +561,7 @@ main {
     font-size: 1.1rem;
 }
 
-/* Buttons */
+/* Boutons du formulaire */
 .form-actions {
     text-align: center;
     margin-top: 40px;
@@ -631,7 +639,7 @@ main {
     font-size: 1.1rem;
 }
 
-/* Footer */
+/* Footer - en bas de la page */
 footer {
     background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
     color: white;
@@ -645,7 +653,7 @@ footer p {
     opacity: 0.9;
 }
 
-/* Responsive */
+/* Responsive - pour mobile et tablette */
 @media (max-width: 768px) {
     body {
         padding: 10px;
@@ -701,7 +709,7 @@ footer p {
     }
 }
 
-/* Print styles */
+/* Styles pour l'impression */
 @media print {
     body {
         background: white;
@@ -730,7 +738,7 @@ footer p {
     }
 }
 
-/* Animations supplémentaires */
+/* Animation pulse - pas vraiment utilisée mais au cas où */
 @keyframes pulse {
     0%, 100% {
         opacity: 1;
@@ -740,7 +748,7 @@ footer p {
     }
 }
 
-/* Scrollbar personnalisée */
+/* Scrollbar personnalisée - pour rendre la barre de défilement plus jolie */
 ::-webkit-scrollbar {
     width: 10px;
 }

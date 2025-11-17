@@ -1,22 +1,17 @@
 <?php
-/**
- * Application complète de gestion d'agence de voyage
- * Tous les fichiers fusionnés en un seul fichier PHP
- */
+// Projet agence de voyage
+// J'ai tout foutu dans un seul fichier, c'est plus simple comme ça
 
-// ============================================
-// CONFIGURATION ET INITIALISATION
-// ============================================
+session_start(); // Pour garder les données entre les pages
 
-session_start();
-
-// Connexion minimale à la base de données
+// Connexion à la DB
+// J'utilise PDO comme on a vu en cours, c'est plus safe
 $pdo = new PDO('mysql:host=127.0.0.1:3306;dbname=compagnieaerienne', 'root', '');
 
-// Nom de l'agence
 define('NOM_AGENCE', 'Voyage Express');
 
-// Configuration des prix
+// Constantes pour les prix
+// J'ai mis ça en constantes pour pas avoir à chercher partout dans le code
 define('PRIX_KG_SUPPLEMENTAIRE', 20.00);
 define('FRAIS_CARTE_BANCAIRE', 30.00);
 define('FRAIS_VIREMENT', 20.00);
@@ -45,32 +40,39 @@ $options_menu = [
 ];
 
 // ============================================
-// FONCTIONS UTILITAIRES
+// FONCTIONS
 // ============================================
 
+// Récupère tous les continents
 function getContinents($pdo) {
     $stmt = $pdo->query("SELECT * FROM continent ORDER BY nom");
     return $stmt->fetchAll();
 }
 
+// Récupère les pays d'un continent
 function getPaysByContinent($pdo, $id_continent) {
     $stmt = $pdo->prepare("SELECT * FROM pays WHERE id_continent = ? ORDER BY nom");
     $stmt->execute([$id_continent]);
     return $stmt->fetchAll();
 }
 
+// Récupère les villes d'un pays
 function getVillesByPays($pdo, $id_pays) {
     $stmt = $pdo->prepare("SELECT * FROM ville WHERE id_pays = ? ORDER BY nom");
     $stmt->execute([$id_pays]);
     return $stmt->fetchAll();
 }
 
+// Récupère le vol pour une ville
+// J'ai mis LIMIT 1 au cas où il y en aurait plusieurs
 function getVolByVille($pdo, $id_ville) {
     $stmt = $pdo->prepare("SELECT * FROM vol WHERE id_ville_arrivee = ? LIMIT 1");
     $stmt->execute([$id_ville]);
     return $stmt->fetch();
 }
 
+// Récupère toutes les infos de la destination
+// J'ai fait un JOIN pour tout récupérer d'un coup, c'est plus pratique
 function getDestinationInfo($pdo, $id_ville) {
     $stmt = $pdo->prepare("
         SELECT v.id_ville, v.nom as nom_ville, p.id_pays, p.nom as nom_pays,
@@ -86,12 +88,14 @@ function getDestinationInfo($pdo, $id_ville) {
     return $stmt->fetch();
 }
 
+// Détermine si c'est un bébé, enfant ou adulte selon l'âge
 function getCategorieAge($age) {
     if ($age < 2) return 'bebe';
     elseif ($age >= 2 && $age <= 11) return 'enfant';
     else return 'adulte';
 }
 
+// Calcule le prix selon l'âge
 function calculerPrixVoyageur($vol, $age) {
     $categorie = getCategorieAge($age);
     switch ($categorie) {
@@ -102,6 +106,7 @@ function calculerPrixVoyageur($vol, $age) {
     }
 }
 
+// Calcule la réduction si on réserve 3 mois avant
 function calculerReduction($date_depart, $montant) {
     $date_depart_obj = new DateTime($date_depart);
     $date_aujourdhui = new DateTime();
@@ -110,12 +115,14 @@ function calculerReduction($date_depart, $montant) {
     return ($mois_avant >= 3) ? $montant * REDUCTION_3_MOIS : 0;
 }
 
+// Calcule le supplément pour les bagages en trop
 function calculerSupplementBagage($poids_bagage, $nb_voyageurs) {
     $poids_inclus = POIDS_BAGAGE_INCLUS * $nb_voyageurs;
     $poids_supplementaire = $poids_bagage - $poids_inclus;
     return ($poids_supplementaire > 0) ? $poids_supplementaire * PRIX_KG_SUPPLEMENTAIRE : 0;
 }
 
+// Calcule le total des boissons
 function calculerTotalBoissons($boissons, $prix_boissons) {
     $total = 0;
     foreach ($boissons as $boisson => $quantite) {
@@ -126,28 +133,35 @@ function calculerTotalBoissons($boissons, $prix_boissons) {
     return $total;
 }
 
+// Calcule les frais selon le moyen de paiement
 function calculerFraisPaiement($moyen_paiement) {
     if ($moyen_paiement === 'Carte Bancaire') return FRAIS_CARTE_BANCAIRE;
     elseif ($moyen_paiement === 'Virement sur compte') return FRAIS_VIREMENT;
     return 0;
 }
 
+// Validation du nom (alphanumérique, max 30 caractères)
 function validerNom($nom) {
     return preg_match('/^[a-zA-Z0-9\s\'-]{1,30}$/u', $nom);
 }
 
+// Validation de l'email (doit contenir @)
 function validerEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false && strpos($email, '@') !== false;
 }
 
+// Validation du téléphone (que des chiffres)
 function validerTelephone($telephone) {
     return preg_match('/^\d+$/', $telephone);
 }
 
+// Validation de l'adresse (max 60 caractères)
 function validerAdresse($adresse) {
     return strlen($adresse) <= 60 && strlen($adresse) > 0;
 }
 
+// Validation de la date de départ
+// Vérifie que c'est dans la période autorisée et après aujourd'hui
 function validerDateDepart($date_depart) {
     $date_depart_obj = new DateTime($date_depart);
     $date_aujourdhui = new DateTime();
@@ -166,6 +180,7 @@ function validerDateDepart($date_depart) {
     return ['valide' => true, 'message' => ''];
 }
 
+// Validation de la date de retour (doit être après le départ)
 function validerDateRetour($date_depart, $date_retour) {
     $date_depart_obj = new DateTime($date_depart);
     $date_retour_obj = new DateTime($date_retour);
@@ -175,22 +190,27 @@ function validerDateRetour($date_depart, $date_retour) {
     return ['valide' => true, 'message' => ''];
 }
 
+// Validation du nombre de voyageurs (entre 1 et 20)
 function validerNombreVoyageurs($nb_voyageurs) {
     return is_numeric($nb_voyageurs) && $nb_voyageurs >= 1 && $nb_voyageurs <= 20;
 }
 
+// Validation du poids des bagages
 function validerPoidsBagage($poids, $nb_voyageurs = 1) {
     return is_numeric($poids) && $poids >= 0 && $poids <= (100 * $nb_voyageurs);
 }
 
+// Formate le prix en euros
 function formaterPrix($prix) {
     return number_format($prix, 2, ',', ' ') . ' €';
 }
 
+// Fonction pour échapper les caractères HTML (sécurité contre XSS)
 function h($data) {
     return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
 }
 
+// Calcule le TTC avec la TVA
 function calculerTTC($total_ht) {
     $tva = $total_ht * TVA;
     return ['ht' => $total_ht, 'tva' => $tva, 'ttc' => $total_ht + $tva];
@@ -202,35 +222,19 @@ function calculerTTC($total_ht) {
 
 $action = $_GET['action'] ?? '';
 
-// Action AJAX pour récupérer les pays
-if ($action === 'getPays') {
-    header('Content-Type: application/json');
-    $id_continent = intval($_GET['continent'] ?? 0);
-    if ($id_continent > 0) {
-        echo json_encode(getPaysByContinent($pdo, $id_continent));
-    } else {
-        echo json_encode([]);
-    }
+// Action pour mettre à jour les menus déroulants
+// Quand on change continent ou pays, le formulaire se soumet et recharge la page
+if ($action === 'updateSelects') {
+    $_SESSION['form_data'] = $_POST;
+    header('Location: index.php');
     exit;
 }
 
-// Action AJAX pour récupérer les villes
-if ($action === 'getVilles') {
-    header('Content-Type: application/json');
-    $id_pays = intval($_GET['pays'] ?? 0);
-    if ($id_pays > 0) {
-        echo json_encode(getVillesByPays($pdo, $id_pays));
-    } else {
-        echo json_encode([]);
-    }
-    exit;
-}
-
-// Action traitement du formulaire
+// Traitement du formulaire quand on clique sur "Valider"
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
     $erreurs = [];
     
-    // Validation des données
+    // Validation de toutes les données
     $nom = trim($_POST['nom'] ?? '');
     $prenom = trim($_POST['prenom'] ?? '');
     $mail = trim($_POST['mail'] ?? '');
@@ -291,6 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
         $erreurs[] = "Veuillez sélectionner un mode de paiement";
     }
     
+    // Si il y a des erreurs, on les sauvegarde et on redirige vers le formulaire
     if (!empty($erreurs)) {
         $_SESSION['erreurs'] = $erreurs;
         $_SESSION['donnees_formulaire'] = $_POST;
@@ -298,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
         exit;
     }
     
-    // Récupérer les informations
+    // Récupère les infos de la destination
     $destination = getDestinationInfo($pdo, $id_ville);
     if (!$destination) {
         $_SESSION['erreurs'] = ["Destination introuvable"];
@@ -306,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
         exit;
     }
     
+    // Récupère le vol
     $vol = getVolByVille($pdo, $id_ville);
     if (!$vol) {
         $_SESSION['erreurs'] = ["Aucun vol disponible"];
@@ -313,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
         exit;
     }
     
-    // Calculs
+    // Calcule les prix pour chaque voyageur
     $total_voyage = 0;
     $details_voyageurs = [];
     foreach ($ages as $index => $age) {
@@ -328,6 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
         ];
     }
     
+    // Calcule tous les montants (réduction, bagages, boissons, etc.)
     $reduction = calculerReduction($date_depart, $total_voyage);
     $total_voyage_apres_reduction = $total_voyage - $reduction;
     $supplement_bagage = calculerSupplementBagage($poids_total, $nb_voyageurs);
@@ -337,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
     $total_ht = $total_voyage_apres_reduction + $supplement_bagage + $total_boissons + $frais_paiement;
     $calcul_ttc = calculerTTC($total_ht);
     
-    // Stocker dans la session
+    // Stocke tout dans la session pour le récap
     $_SESSION['reservation'] = [
         'client' => ['nom' => $nom, 'prenom' => $prenom, 'mail' => $mail, 'telephone' => $telephone, 'adresse' => $adresse],
         'destination' => $destination,
@@ -366,13 +373,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
     exit;
 }
 
-// Action récapitulatif
+// Page récapitulatif
 if ($action === 'recap') {
+    // Vérifie qu'il y a bien une réservation
     if (!isset($_SESSION['reservation'])) {
         header('Location: index.php');
         exit;
     }
     
+    // Récupère toutes les données
     $reservation = $_SESSION['reservation'];
     $client = $reservation['client'];
     $destination = $reservation['destination'];
@@ -385,7 +394,7 @@ if ($action === 'recap') {
     $moyen_paiement = $reservation['moyen_paiement'];
     $calculs = $reservation['calculs'];
     
-    // Enregistrer dans la base de données
+    // Enregistre le client dans la DB
     try {
         $stmt = $pdo->prepare("INSERT INTO client (nom, prenom, mail, telephone, adresse) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$client['nom'], $client['prenom'], $client['mail'], $client['telephone'], $client['adresse']]);
@@ -394,11 +403,13 @@ if ($action === 'recap') {
         die("Erreur : " . $e->getMessage());
     }
     
+    // Calcule le poids total des bagages
     $poids_total_bagages = 0;
     foreach ($voyageurs as $voyageur) {
         $poids_total_bagages += $voyageur['poids_bagage'];
     }
     
+    // Compte combien il y a de bébés, enfants et adultes
     $nb_bebe = 0; $nb_enfant = 0; $nb_adulte = 0;
     foreach ($voyageurs as $voyageur) {
         switch ($voyageur['categorie']) {
@@ -408,6 +419,7 @@ if ($action === 'recap') {
         }
     }
     
+    // Enregistre le voyage dans la DB
     try {
         $stmt = $pdo->prepare("INSERT INTO voyage (id_client, id_vol, date_depart, date_retour, nb_adulte, nb_enfant, nb_bebe, poids_bagage, moyen_paiement) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([$id_client, $vol['id_vol'], $dates['depart'], $dates['retour'], $nb_adulte, $nb_enfant, $nb_bebe, intval($poids_total_bagages), $moyen_paiement]);
@@ -416,7 +428,7 @@ if ($action === 'recap') {
         die("Erreur : " . $e->getMessage());
     }
     
-    // Afficher le récapitulatif
+    // Affiche le récap
     ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -567,12 +579,31 @@ if ($action === 'recap') {
 }
 
 // ============================================
-// AFFICHAGE DU FORMULAIRE (par défaut)
+// AFFICHAGE DU FORMULAIRE
 // ============================================
 
+// Récupère les continents
 $continents = getContinents($pdo);
-$donnees = $_SESSION['donnees_formulaire'] ?? [];
+
+// Récupère les données du formulaire (soit après erreur, soit pour garder les sélections)
+$donnees = $_SESSION['donnees_formulaire'] ?? $_SESSION['form_data'] ?? [];
 unset($_SESSION['donnees_formulaire']);
+unset($_SESSION['form_data']);
+
+// Récupère les pays si un continent est sélectionné
+$pays = [];
+if (!empty($donnees['continent'])) {
+    $pays = getPaysByContinent($pdo, intval($donnees['continent']));
+}
+
+// Récupère les villes si un pays est sélectionné
+$villes = [];
+if (!empty($donnees['pays'])) {
+    $villes = getVillesByPays($pdo, intval($donnees['pays']));
+}
+
+// Nombre de voyageurs (par défaut 1)
+$nb_voyageurs = intval($donnees['nb_voyageurs'] ?? 1);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -669,25 +700,39 @@ unset($_SESSION['donnees_formulaire']);
 
                         <div class="form-group">
                             <label for="continent">Continent <span class="requis">*</span></label>
-                            <select id="continent" name="continent" required>
+                            <select id="continent" name="continent" required onchange="this.form.action='index.php?action=updateSelects'; this.form.submit();">
                                 <option value="">-- Sélectionnez un continent --</option>
                                 <?php foreach ($continents as $continent): ?>
-                                    <option value="<?php echo h($continent['id_continent']); ?>"><?php echo h($continent['nom']); ?></option>
+                                    <option value="<?php echo h($continent['id_continent']); ?>" <?php echo (isset($donnees['continent']) && $donnees['continent'] == $continent['id_continent']) ? 'selected' : ''; ?>><?php echo h($continent['nom']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="pays">Pays <span class="requis">*</span></label>
-                            <select id="pays" name="pays" required disabled>
-                                <option value="">-- Sélectionnez d'abord un continent --</option>
+                            <select id="pays" name="pays" required <?php echo empty($pays) ? 'disabled' : ''; ?> onchange="this.form.action='index.php?action=updateSelects'; this.form.submit();">
+                                <?php if (empty($pays)): ?>
+                                    <option value="">-- Sélectionnez d'abord un continent --</option>
+                                <?php else: ?>
+                                    <option value="">-- Sélectionnez un pays --</option>
+                                    <?php foreach ($pays as $p): ?>
+                                        <option value="<?php echo h($p['id_pays']); ?>" <?php echo (isset($donnees['pays']) && $donnees['pays'] == $p['id_pays']) ? 'selected' : ''; ?>><?php echo h($p['nom']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="ville">Ville <span class="requis">*</span></label>
-                            <select id="ville" name="ville" required disabled>
-                                <option value="">-- Sélectionnez d'abord un pays --</option>
+                            <select id="ville" name="ville" required <?php echo empty($villes) ? 'disabled' : ''; ?>>
+                                <?php if (empty($villes)): ?>
+                                    <option value="">-- Sélectionnez d'abord un pays --</option>
+                                <?php else: ?>
+                                    <option value="">-- Sélectionnez une ville --</option>
+                                    <?php foreach ($villes as $v): ?>
+                                        <option value="<?php echo h($v['id_ville']); ?>" <?php echo (isset($donnees['ville']) && $donnees['ville'] == $v['id_ville']) ? 'selected' : ''; ?>><?php echo h($v['nom']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
                     </div>
@@ -700,13 +745,18 @@ unset($_SESSION['donnees_formulaire']);
 
                         <div class="form-group">
                             <label for="date_depart">Date de Départ <span class="requis">*</span></label>
-                            <input type="date" id="date_depart" name="date_depart" required min="<?php echo DATE_DEPART_MIN; ?>" max="<?php echo DATE_DEPART_MAX; ?>">
+                            <input type="date" id="date_depart" name="date_depart" required 
+                                   min="<?php echo DATE_DEPART_MIN; ?>" max="<?php echo DATE_DEPART_MAX; ?>"
+                                   value="<?php echo h($donnees['date_depart'] ?? ''); ?>"
+                                   onchange="this.form.action='index.php?action=updateSelects'; this.form.submit();">
                             <small>Entre le <?php echo date('d/m/Y', strtotime(DATE_DEPART_MIN)); ?> et le <?php echo date('d/m/Y', strtotime(DATE_DEPART_MAX)); ?></small>
                         </div>
 
                         <div class="form-group">
                             <label for="date_retour">Date de Retour <span class="requis">*</span></label>
-                            <input type="date" id="date_retour" name="date_retour" required>
+                            <input type="date" id="date_retour" name="date_retour" required 
+                                   min="<?php echo isset($donnees['date_depart']) ? $donnees['date_depart'] : DATE_DEPART_MIN; ?>"
+                                   value="<?php echo h($donnees['date_retour'] ?? ''); ?>">
                             <small>Doit être postérieure à la date de départ</small>
                         </div>
                     </div>
@@ -719,11 +769,31 @@ unset($_SESSION['donnees_formulaire']);
 
                         <div class="form-group">
                             <label for="nb_voyageurs">Nombre de Voyageurs <span class="requis">*</span></label>
-                            <input type="number" id="nb_voyageurs" name="nb_voyageurs" required min="1" max="20" value="1">
+                            <input type="number" id="nb_voyageurs" name="nb_voyageurs" required min="1" max="20" 
+                                   value="<?php echo $nb_voyageurs; ?>"
+                                   onchange="this.form.action='index.php?action=updateSelects'; this.form.submit();">
                             <small>Entre 1 et 20 voyageurs</small>
                         </div>
 
-                        <div id="voyageurs-container"></div>
+                        <?php for ($i = 0; $i < $nb_voyageurs; $i++): ?>
+                            <div class="voyageur-group">
+                                <h4>Voyageur <?php echo $i + 1; ?></h4>
+                                <div class="form-group">
+                                    <label>Âge <span class="requis">*</span></label>
+                                    <input type="number" name="ages[]" required min="0" max="120" 
+                                           placeholder="Âge du voyageur"
+                                           value="<?php echo h($donnees['ages'][$i] ?? ''); ?>">
+                                    <small>Âge du voyageur</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Poids des bagages (kg) <span class="requis">*</span></label>
+                                    <input type="number" name="poids_bagages[]" required min="0" max="100" step="0.1" 
+                                           placeholder="Poids en kg"
+                                           value="<?php echo h($donnees['poids_bagages'][$i] ?? ''); ?>">
+                                    <small>25 kg inclus par voyageur</small>
+                                </div>
+                            </div>
+                        <?php endfor; ?>
                     </div>
 
                     <div class="section-form">
@@ -736,7 +806,7 @@ unset($_SESSION['donnees_formulaire']);
                             <label for="entree">Entrée <span class="requis">*</span></label>
                             <select id="entree" name="entree" required>
                                 <?php foreach ($options_menu['entrees'] as $entree): ?>
-                                    <option value="<?php echo h($entree); ?>"><?php echo h($entree); ?></option>
+                                    <option value="<?php echo h($entree); ?>" <?php echo (isset($donnees['entree']) && $donnees['entree'] == $entree) ? 'selected' : ''; ?>><?php echo h($entree); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -745,7 +815,7 @@ unset($_SESSION['donnees_formulaire']);
                             <label for="plat">Plat <span class="requis">*</span></label>
                             <select id="plat" name="plat" required>
                                 <?php foreach ($options_menu['plats'] as $plat): ?>
-                                    <option value="<?php echo h($plat); ?>"><?php echo h($plat); ?></option>
+                                    <option value="<?php echo h($plat); ?>" <?php echo (isset($donnees['plat']) && $donnees['plat'] == $plat) ? 'selected' : ''; ?>><?php echo h($plat); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -754,7 +824,7 @@ unset($_SESSION['donnees_formulaire']);
                             <label for="dessert">Dessert <span class="requis">*</span></label>
                             <select id="dessert" name="dessert" required>
                                 <?php foreach ($options_menu['desserts'] as $dessert): ?>
-                                    <option value="<?php echo h($dessert); ?>"><?php echo h($dessert); ?></option>
+                                    <option value="<?php echo h($dessert); ?>" <?php echo (isset($donnees['dessert']) && $donnees['dessert'] == $dessert) ? 'selected' : ''; ?>><?php echo h($dessert); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -768,31 +838,31 @@ unset($_SESSION['donnees_formulaire']);
 
                         <div class="form-group">
                             <label>Eau (1/2) - <?php echo formaterPrix($prix_boissons['eau']); ?>
-                                <input type="number" name="boissons[eau]" min="0" value="0" class="boisson-input">
+                                <input type="number" name="boissons[eau]" min="0" value="<?php echo h($donnees['boissons']['eau'] ?? 0); ?>" class="boisson-input">
                             </label>
                         </div>
 
                         <div class="form-group">
                             <label>Cannette Bière - <?php echo formaterPrix($prix_boissons['biere']); ?>
-                                <input type="number" name="boissons[biere]" min="0" value="0" class="boisson-input">
+                                <input type="number" name="boissons[biere]" min="0" value="<?php echo h($donnees['boissons']['biere'] ?? 0); ?>" class="boisson-input">
                             </label>
                         </div>
 
                         <div class="form-group">
                             <label>1/4 l Vin - <?php echo formaterPrix($prix_boissons['vin']); ?>
-                                <input type="number" name="boissons[vin]" min="0" value="0" class="boisson-input">
+                                <input type="number" name="boissons[vin]" min="0" value="<?php echo h($donnees['boissons']['vin'] ?? 0); ?>" class="boisson-input">
                             </label>
                         </div>
 
                         <div class="form-group">
                             <label>Cannette Coca - <?php echo formaterPrix($prix_boissons['coca']); ?>
-                                <input type="number" name="boissons[coca]" min="0" value="0" class="boisson-input">
+                                <input type="number" name="boissons[coca]" min="0" value="<?php echo h($donnees['boissons']['coca'] ?? 0); ?>" class="boisson-input">
                             </label>
                         </div>
 
                         <div class="form-group">
                             <label>Jus d'Orange - <?php echo formaterPrix($prix_boissons['jus_orange']); ?>
-                                <input type="number" name="boissons[jus_orange]" min="0" value="0" class="boisson-input">
+                                <input type="number" name="boissons[jus_orange]" min="0" value="<?php echo h($donnees['boissons']['jus_orange'] ?? 0); ?>" class="boisson-input">
                             </label>
                         </div>
                     </div>
@@ -805,7 +875,8 @@ unset($_SESSION['donnees_formulaire']);
 
                         <div class="payment-options">
                             <label class="payment-option">
-                                <input type="radio" name="moyen_paiement" value="Carte Bancaire" required>
+                                <input type="radio" name="moyen_paiement" value="Carte Bancaire" required 
+                                       <?php echo (isset($donnees['moyen_paiement']) && $donnees['moyen_paiement'] == 'Carte Bancaire') ? 'checked' : ''; ?>>
                                 <div class="payment-card">
                                     <i class="fas fa-credit-card"></i>
                                     <div>
@@ -816,7 +887,8 @@ unset($_SESSION['donnees_formulaire']);
                             </label>
 
                             <label class="payment-option">
-                                <input type="radio" name="moyen_paiement" value="Virement sur compte" required>
+                                <input type="radio" name="moyen_paiement" value="Virement sur compte" required
+                                       <?php echo (isset($donnees['moyen_paiement']) && $donnees['moyen_paiement'] == 'Virement sur compte') ? 'checked' : ''; ?>>
                                 <div class="payment-card">
                                     <i class="fas fa-university"></i>
                                     <div>
@@ -845,86 +917,5 @@ unset($_SESSION['donnees_formulaire']);
         </footer>
     </div>
 
-    <script>
-        document.getElementById('continent').addEventListener('change', function() {
-            const continentId = this.value;
-            const paysSelect = document.getElementById('pays');
-            const villeSelect = document.getElementById('ville');
-            
-            paysSelect.innerHTML = '<option value="">Chargement...</option>';
-            paysSelect.disabled = true;
-            villeSelect.innerHTML = '<option value="">-- Sélectionnez d\'abord un pays --</option>';
-            villeSelect.disabled = true;
-            
-            if (continentId) {
-                fetch('index.php?action=getPays&continent=' + continentId)
-                    .then(response => response.json())
-                    .then(data => {
-                        paysSelect.innerHTML = '<option value="">-- Sélectionnez un pays --</option>';
-                        data.forEach(pays => {
-                            const option = document.createElement('option');
-                            option.value = pays.id_pays;
-                            option.textContent = pays.nom;
-                            paysSelect.appendChild(option);
-                        });
-                        paysSelect.disabled = false;
-                    });
-            }
-        });
-
-        document.getElementById('pays').addEventListener('change', function() {
-            const paysId = this.value;
-            const villeSelect = document.getElementById('ville');
-            
-            villeSelect.innerHTML = '<option value="">Chargement...</option>';
-            villeSelect.disabled = true;
-            
-            if (paysId) {
-                fetch('index.php?action=getVilles&pays=' + paysId)
-                    .then(response => response.json())
-                    .then(data => {
-                        villeSelect.innerHTML = '<option value="">-- Sélectionnez une ville --</option>';
-                        data.forEach(ville => {
-                            const option = document.createElement('option');
-                            option.value = ville.id_ville;
-                            option.textContent = ville.nom;
-                            villeSelect.appendChild(option);
-                        });
-                        villeSelect.disabled = false;
-                    });
-            }
-        });
-
-        document.getElementById('nb_voyageurs').addEventListener('change', function() {
-            const nbVoyageurs = parseInt(this.value);
-            const container = document.getElementById('voyageurs-container');
-            container.innerHTML = '';
-            
-            for (let i = 1; i <= nbVoyageurs; i++) {
-                const voyageurDiv = document.createElement('div');
-                voyageurDiv.className = 'voyageur-group';
-                voyageurDiv.innerHTML = `
-                    <h4>Voyageur ${i}</h4>
-                    <div class="form-group">
-                        <label>Âge <span class="requis">*</span></label>
-                        <input type="number" name="ages[]" required min="0" max="120" placeholder="Âge du voyageur">
-                        <small>Âge du voyageur</small>
-                    </div>
-                    <div class="form-group">
-                        <label>Poids des bagages (kg) <span class="requis">*</span></label>
-                        <input type="number" name="poids_bagages[]" required min="0" max="100" step="0.1" placeholder="Poids en kg">
-                        <small>25 kg inclus par voyageur</small>
-                    </div>
-                `;
-                container.appendChild(voyageurDiv);
-            }
-        });
-
-        document.getElementById('nb_voyageurs').dispatchEvent(new Event('change'));
-
-        document.getElementById('date_depart').addEventListener('change', function() {
-            document.getElementById('date_retour').min = this.value;
-        });
-    </script>
 </body>
 </html>
